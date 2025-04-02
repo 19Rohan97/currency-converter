@@ -8,11 +8,17 @@ export default function App() {
   const [fromSelect, setFromSelect] = useState("CAD");
   const [toSelect, setToSelect] = useState("INR");
   const [rates, setRates] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(function () {
     const controller = new AbortController();
     async function fetchCurrency() {
       try {
+        setLoading(true);
+
+        setError("");
+
         const res = await fetch(`https://api.frankfurter.app/latest`, {
           signal: controller.signal,
         });
@@ -21,11 +27,14 @@ export default function App() {
 
         const data = await res.json();
         setRates(Object.keys(data.rates));
-        console.log(rates);
+
+        setError("");
       } catch (err) {
         if (err.name !== "AbortError") {
-          console.log(err.message);
+          setError(err.message);
         }
+      } finally {
+        setLoading(false);
       }
     }
 
@@ -37,12 +46,20 @@ export default function App() {
   }, []);
 
   return (
-    <div>
-      <Input amount={amount} setAmount={setAmount} />
-      <Select rates={rates} value={fromSelect} onChange={setFromSelect} />
-      <Select rates={rates} value={toSelect} onChange={setToSelect} />
-      <Output amount={amount} fromSelect={fromSelect} toSelect={toSelect} />
-    </div>
+    <main className="h-screen w-full flex items-center justify-center p-2">
+      <div className="w-full h-full max-w-lg max-h-fit bg-slate-600 p-6 rounded-xl flex flex-col gap-4">
+        <Input amount={amount} setAmount={setAmount} />
+        <div className="flex justify-center gap-5">
+          <Select rates={rates} value={fromSelect} onChange={setFromSelect} />
+          <Select rates={rates} value={toSelect} onChange={setToSelect} />
+        </div>
+        {loading && <Loader />}
+        {!loading && (
+          <Output amount={amount} fromSelect={fromSelect} toSelect={toSelect} />
+        )}
+        {error && <Error message={error} />}
+      </div>
+    </main>
   );
 }
 
@@ -53,6 +70,7 @@ function Input({ amount, setAmount }) {
         type="text"
         value={amount}
         onChange={(e) => setAmount(e.target.value)}
+        className="outline-none p-3 text-xl max-w-50 block mx-auto"
       />
     </>
   );
@@ -60,7 +78,11 @@ function Input({ amount, setAmount }) {
 
 function Select({ rates, value, onChange }) {
   return (
-    <select value={value} onChange={(e) => onChange(e.target.value)}>
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="outline-none p-2"
+    >
       {rates?.map((rate) => (
         <option value={rate} key={rate}>
           {rate}
@@ -72,12 +94,15 @@ function Select({ rates, value, onChange }) {
 
 function Output({ amount, fromSelect, toSelect }) {
   const [output, setOutput] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(
     function () {
       const controller = new AbortController();
       async function fetchCurrency() {
         try {
+          setLoading(true);
+
           const res = await fetch(
             `https://api.frankfurter.app/latest?amount=${amount}&from=${fromSelect}&to=${toSelect}`,
             { signal: controller.signal }
@@ -92,6 +117,8 @@ function Output({ amount, fromSelect, toSelect }) {
           if (err.name !== "AbortError") {
             console.log(err.message);
           }
+        } finally {
+          setLoading(false);
         }
       }
 
@@ -101,7 +128,34 @@ function Output({ amount, fromSelect, toSelect }) {
         controller.abort();
       };
     },
-    [amount, toSelect, fromSelect, output]
+    [amount, toSelect, fromSelect]
   );
-  return <p>Output is {output}</p>;
+
+  return (
+    <>
+      {loading ? (
+        <Loader />
+      ) : (
+        <h1 className="text-2xl font-semibold text-center text-white">
+          Output is {output} {toSelect}
+        </h1>
+      )}
+    </>
+  );
+}
+
+function Loader() {
+  return (
+    <h1 className="text-2xl font-semibold text-center text-white">
+      Converting...
+    </h1>
+  );
+}
+
+function Error() {
+  return (
+    <h1 className="text-2xl font-semibold text-center text-white">
+      Something went wrong
+    </h1>
+  );
 }
