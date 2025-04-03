@@ -48,10 +48,20 @@ export default function App() {
   return (
     <main className="h-screen w-full flex items-center justify-center p-2">
       <div className="w-full h-full max-w-lg max-h-fit bg-slate-600 p-6 rounded-xl flex flex-col gap-4">
-        <Input amount={amount} setAmount={setAmount} />
+        <Input amount={amount} setAmount={setAmount} loading={loading} />
         <div className="flex justify-center gap-5">
-          <Select rates={rates} value={fromSelect} onChange={setFromSelect} />
-          <Select rates={rates} value={toSelect} onChange={setToSelect} />
+          <Select
+            rates={rates}
+            value={fromSelect}
+            onChange={setFromSelect}
+            loading={loading}
+          />
+          <Select
+            rates={rates}
+            value={toSelect}
+            onChange={setToSelect}
+            loading={loading}
+          />
         </div>
         {loading && <Loader />}
         {!loading && (
@@ -63,7 +73,7 @@ export default function App() {
   );
 }
 
-function Input({ amount, setAmount }) {
+function Input({ amount, setAmount, loading }) {
   return (
     <>
       <input
@@ -71,17 +81,19 @@ function Input({ amount, setAmount }) {
         value={amount}
         onChange={(e) => setAmount(e.target.value)}
         className="outline-none p-3 text-xl max-w-50 block mx-auto"
+        disabled={loading}
       />
     </>
   );
 }
 
-function Select({ rates, value, onChange }) {
+function Select({ rates, value, onChange, loading }) {
   return (
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
       className="outline-none p-2"
+      disabled={loading}
     >
       {rates?.map((rate) => (
         <option value={rate} key={rate}>
@@ -120,6 +132,10 @@ function Output({ amount, fromSelect, toSelect }) {
         } finally {
           setLoading(false);
         }
+      }
+
+      if (fromSelect === toSelect) {
+        return setOutput(amount);
       }
 
       fetchCurrency();
